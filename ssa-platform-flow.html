@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SSA Platform — Top-Level Flow &amp; Pipeline C Internals</title>
+</head>
+<body>
+
+<!--
+  ============================================================
+  PORTABLE SECTION — copy from <section class="ssa-flow-doc">
+  through its closing </section> to paste into the docsite.
+  All styles are scoped under .ssa-flow-doc and the two SVG
+  figures sit on a fixed light surface so they render legibly
+  regardless of the host page theme. No external CSS, no JS.
+  ============================================================
+-->
+<section class="ssa-flow-doc" id="ssa-platform-flow">
+<style>
+  .ssa-flow-doc { line-height: 1.6; max-width: 820px; margin: 0 auto; }
+  .ssa-flow-doc h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 .25rem; }
+  .ssa-flow-doc h2 { font-size: 1.2rem; font-weight: 600; margin: 1.75rem 0 .5rem; }
+  .ssa-flow-doc h3 { font-size: 1.02rem; font-weight: 600; margin: 1.25rem 0 .4rem; }
+  .ssa-flow-doc .ssa-meta { font-size: .85rem; opacity: .7; margin: 0 0 1rem; }
+  .ssa-flow-doc .ssa-fig {
+    background: #ffffff; border: 1px solid #e5e3da; border-radius: 12px;
+    padding: 16px; margin: 14px 0 18px; overflow-x: auto;
+  }
+  .ssa-flow-doc .ssa-fig svg { width: 100%; height: auto; display: block; }
+  .ssa-flow-doc .ssa-fig figcaption { font-size: .82rem; opacity: .65; margin-top: 8px; }
+  .ssa-flow-doc text {
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .ssa-flow-doc .th { font-size: 14px; font-weight: 500; }
+  .ssa-flow-doc .ts { font-size: 12px; font-weight: 400; }
+  .ssa-flow-doc ul { margin: .4rem 0 .8rem; padding-left: 1.2rem; }
+  .ssa-flow-doc li { margin: .3rem 0; }
+  .ssa-flow-doc code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .9em; padding: .05em .35em; border-radius: 4px;
+    background: rgba(127,127,127,.14);
+  }
+  .ssa-flow-doc .ssa-legend { font-size: .85rem; opacity: .85; }
+</style>
+
+<h1>SSA platform — top-level flow &amp; Pipeline C internals</h1>
+<p class="ssa-meta">Two reference diagrams with accompanying notes. Generated 2026-06-16. Scope: data-app ↔ client architecture and the Pipeline C stage chain. Figures are self-contained and theme-independent; surrounding prose inherits the host docsite styling.</p>
+
+<h2>1. Platform overview</h2>
+<p>Upstream sources feed the data app via S3. The data app exposes two operator surfaces and runs both pipelines in parallel, then crosses a one-way contract boundary into the client app. The constraints that are easy to lose at this altitude — the second operator surface, the separate <code>raw_posts</code> path, the additive webhook budget, and the admin-only status of Pipeline C — are drawn explicitly rather than collapsed.</p>
+
+<figure class="ssa-fig">
+<svg viewBox="0 0 680 684" role="img" xmlns="http://www.w3.org/2000/svg">
+<title>SSA platform overview with load-bearing constraints surfaced</title>
+<desc>Upstream sources feed the data app via S3. The data app has two operator surfaces (Streamlit on port 5000, FastAPI HTML on port 8000) and runs Pipeline B (segmented, live to users) and Pipeline C (unified, admin-only, not yet on client) in parallel. Two separate outputs cross a one-way contract boundary into the client backend: the reports webhook and a separate-cadence raw_posts sync. The client backend reads and writes PostgreSQL, calls external AI and email services, and serves the React SPA to users. The client never tasks the data app.</desc>
+<defs>
+<marker id="ssaArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+
+<g>
+<rect x="220" y="30" width="220" height="50" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+<text class="th" x="330" y="55" text-anchor="middle" dominant-baseline="central" fill="#2C2C2A">Upstream sources</text>
+</g>
+<text class="ts" x="350" y="98" dominant-baseline="central" fill="#6b6a64">S3 dated CSV poll</text>
+<line x1="330" y1="84" x2="330" y2="112" stroke="#73726c" stroke-width="1.5" marker-end="url(#ssaArrow)"/>
+
+<rect x="55" y="116" width="570" height="240" rx="14" fill="none" stroke="#888780" stroke-width="1" stroke-dasharray="4 4"/>
+<text class="th" x="74" y="138" dominant-baseline="central" fill="#3d3d3a">Data app</text>
+<text class="ts" x="74" y="156" dominant-baseline="central" fill="#6b6a64">FastAPI · Streamlit · workers</text>
+
+<g>
+<rect x="80" y="172" width="255" height="54" rx="8" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+<text class="th" x="207" y="192" text-anchor="middle" dominant-baseline="central" fill="#633806">Streamlit · port 5000</text>
+<text class="ts" x="207" y="210" text-anchor="middle" dominant-baseline="central" fill="#633806">CSV upload · topic review</text>
+</g>
+<g>
+<rect x="355" y="172" width="255" height="54" rx="8" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+<text class="th" x="482" y="192" text-anchor="middle" dominant-baseline="central" fill="#633806">FastAPI · port 8000</text>
+<text class="ts" x="482" y="210" text-anchor="middle" dominant-baseline="central" fill="#633806">Automation · kill-switches</text>
+</g>
+<text class="ts" x="352" y="237" dominant-baseline="central" fill="#6b6a64">operate</text>
+<line x1="345" y1="226" x2="345" y2="250" stroke="#73726c" stroke-width="1.5" marker-end="url(#ssaArrow)"/>
+
+<g>
+<rect x="80" y="254" width="255" height="86" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+<text class="th" x="207" y="278" text-anchor="middle" dominant-baseline="central" fill="#085041">Pipeline B</text>
+<text class="ts" x="207" y="300" text-anchor="middle" dominant-baseline="central" fill="#085041">Segmented legacy</text>
+<text class="ts" x="207" y="320" text-anchor="middle" dominant-baseline="central" fill="#085041">Per-category · live to users</text>
+</g>
+<g>
+<rect x="355" y="254" width="255" height="86" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text class="th" x="482" y="278" text-anchor="middle" dominant-baseline="central" fill="#3C3489">Pipeline C</text>
+<text class="ts" x="482" y="300" text-anchor="middle" dominant-baseline="central" fill="#3C3489">Unified corpus</text>
+<text class="ts" x="482" y="320" text-anchor="middle" dominant-baseline="central" fill="#3C3489">Admin-only · not yet on client</text>
+</g>
+
+<line x1="207" y1="340" x2="285" y2="356" stroke="#888780" stroke-width="1" fill="none"/>
+<line x1="482" y1="340" x2="285" y2="356" stroke="#888780" stroke-width="1" fill="none"/>
+
+<text class="th" x="60" y="368" dominant-baseline="central" fill="#3d3d3a">Contract boundary</text>
+<text class="ts" x="60" y="382" dominant-baseline="central" fill="#6b6a64">downward only</text>
+
+<text class="ts" x="285" y="368" text-anchor="middle" dominant-baseline="central" fill="#6b6a64">reports webhook</text>
+<text class="ts" x="285" y="382" text-anchor="middle" dominant-baseline="central" fill="#6b6a64">additive · ~1 MB</text>
+<line x1="285" y1="358" x2="285" y2="406" stroke="#73726c" stroke-width="1.5" marker-end="url(#ssaArrow)"/>
+
+<text class="ts" x="405" y="368" text-anchor="middle" dominant-baseline="central" fill="#6b6a64">raw_posts sync</text>
+<text class="ts" x="405" y="382" text-anchor="middle" dominant-baseline="central" fill="#6b6a64">separate cadence</text>
+<line x1="405" y1="358" x2="405" y2="406" stroke="#73726c" stroke-width="1.5" marker-end="url(#ssaArrow)"/>
+
+<line x1="55" y1="392" x2="625" y2="392" stroke="#888780" stroke-width="1" stroke-dasharray="5 4"/>
+
+<g>
+<rect x="235" y="410" width="190" height="70" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+<text class="th" x="330" y="436" text-anchor="middle" dominant-baseline="central" fill="#712B13">Client backend</text>
+<text class="ts" x="330" y="456" text-anchor="middle" dominant-baseline="central" fill="#712B13">Express · REST /api · cron</text>
+</g>
+
+<g>
+<rect x="45" y="417" width="160" height="56" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+<text class="th" x="125" y="439" text-anchor="middle" dominant-baseline="central" fill="#2C2C2A">PostgreSQL</text>
+<text class="ts" x="125" y="457" text-anchor="middle" dominant-baseline="central" fill="#2C2C2A">Neon · Drizzle</text>
+</g>
+<line x1="231" y1="445" x2="209" y2="445" stroke="#73726c" stroke-width="1.5" marker-start="url(#ssaArrow)" marker-end="url(#ssaArrow)"/>
+
+<g>
+<rect x="450" y="417" width="180" height="56" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+<text class="th" x="540" y="439" text-anchor="middle" dominant-baseline="central" fill="#0C447C">AI + email</text>
+<text class="ts" x="540" y="457" text-anchor="middle" dominant-baseline="central" fill="#0C447C">Grok · OpenAI · Resend</text>
+</g>
+<line x1="429" y1="445" x2="446" y2="445" stroke="#73726c" stroke-width="1.5" marker-end="url(#ssaArrow)"/>
+
+<text class="ts" x="340" y="496" dominant-baseline="central" fill="#6b6a64">REST JSON</text>
+<line x1="330" y1="480" x2="330" y2="498" stroke="#73726c" stroke-width="1.5" marker-end="url(#ssaArrow)"/>
+
+<g>
+<rect x="230" y="502" width="200" height="64" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+<text class="th" x="330" y="525" text-anchor="middle" dominant-baseline="central" fill="#712B13">React SPA</text>
+<text class="ts" x="330" y="545" text-anchor="middle" dominant-baseline="central" fill="#712B13">Bilingual · RTL-primary</text>
+</g>
+<line x1="330" y1="566" x2="330" y2="598" stroke="#73726c" stroke-width="1.5" marker-end="url(#ssaArrow)"/>
+
+<g>
+<rect x="235" y="602" width="190" height="54" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+<text class="th" x="330" y="624" text-anchor="middle" dominant-baseline="central" fill="#2C2C2A">Users</text>
+<text class="ts" x="330" y="642" text-anchor="middle" dominant-baseline="central" fill="#2C2C2A">Analysts · journalists</text>
+</g>
+</svg>
+<figcaption>Figure 1 — SSA platform overview. Amber = operator/admin surfaces; teal/purple = the two parallel pipelines; coral = the client app; blue = external services; gray = neutral I/O.</figcaption>
+</figure>
+
+<h3>Accompanying points</h3>
+<ul>
+<li>The two converging lines under the pipelines reflect the real contract: both pipelines emit per-day reports against the <em>same</em> webhook endpoint, with Pipeline C's fields layered additively on top of the Pipeline B shape rather than substituting them. The client renders either payload without knowing which produced it.</li>
+<li>Today only Pipeline B reaches end users. Pipeline C output is admin-only, gated behind the Plans A/B/C convergence work.</li>
+<li><code>raw_posts</code> sync is a distinct path on its own cadence (currently Telegram-only) with its own kill-switch; Pipeline C does not depend on it for its corpus (Stage 1 reads S3 directly), but the client daily-summary endpoint does.</li>
+<li>The contract is one-directional: data flows down only. The client never asks the data app to re-process, re-classify, or add a field — any such need is scoped and escalated separately.</li>
+<li>The webhook payload is measured against a hard ~1 MB proxy ceiling, which drives the trim and byte-budget policy.</li>
+</ul>
+
+<h2>2. Pipeline C internals</h2>
+<p>The stage chain that Figure 1 collapses into a single purple box, with the known gaps flagged where they actually occur. The headline is domain routing: the anchor-centroid gate is near-dormant and the LLM fallback does essentially all the disambiguation.</p>
+
+<figure class="ssa-fig">
+<svg viewBox="0 0 680 614" role="img" xmlns="http://www.w3.org/2000/svg">
+<title>Pipeline C internal stages with known gaps flagged</title>
+<desc>Pipeline C runs: embed, cluster with HDBSCAN, route each cluster to a domain, merge near-duplicates, analyze and synthesize with the LLM, then derive viewpoints and a grounding check deterministically, emitting an admin-only unified report. Flagged gaps: the embedding gate fails the run below 95 percent coverage; the anchor-centroid routing gate fires on about 0.2 percent of clusters so the LLM fallback does nearly all routing; the Jaccard merge folded zero clusters in 14 days; and the eight domain prompts are unrevised starter drafts.</desc>
+<defs>
+<marker id="ssaArrow2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+
+<g>
+<rect x="90" y="40" width="250" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text class="th" x="215" y="62" text-anchor="middle" dominant-baseline="central" fill="#3C3489">Embed</text>
+<text class="ts" x="215" y="80" text-anchor="middle" dominant-baseline="central" fill="#3C3489">text-embedding-3-small · 1536-d</text>
+</g>
+<line x1="340" y1="68" x2="398" y2="68" stroke="#9c9a92" stroke-width="0.75" stroke-dasharray="3 3"/>
+<circle cx="340" cy="68" r="2" fill="#888780"/>
+<g>
+<rect x="400" y="46" width="230" height="44" rx="8" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+<text class="ts" x="515" y="68" text-anchor="middle" dominant-baseline="central" fill="#633806">Coverage &lt; 95% → run fails</text>
+</g>
+
+<line x1="215" y1="96" x2="215" y2="120" stroke="#73726c" stroke-width="1.5" marker-end="url(#ssaArrow2)"/>
+
+<g>
+<rect x="90" y="120" width="250" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text class="th" x="215" y="142" text-anchor="middle" dominant-baseline="central" fill="#3C3489">Cluster</text>
+<text class="ts" x="215" y="160" text-anchor="middle" dominant-baseline="central" fill="#3C3489">HDBSCAN · min 35 / 10 · ε 0.0</text>
+</g>
+
+<line x1="215" y1="176" x2="215" y2="200" stroke="#73726c" stroke-width="1.5" marker-end="url(#ssaArrow2)"/>
+
+<g>
+<rect x="90" y="200" width="250" height="64" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text class="th" x="215" y="220" text-anchor="middle" dominant-baseline="central" fill="#3C3489">Route to domain</text>
+<text class="ts" x="215" y="238" text-anchor="middle" dominant-baseline="central" fill="#3C3489">anchor gate vs LLM fallback</text>
+<text class="ts" x="215" y="254" text-anchor="middle" dominant-baseline="central" fill="#3C3489">7 domains + unclassified</text>
+</g>
+<line x1="340" y1="232" x2="398" y2="232" stroke="#9c9a92" stroke-width="0.75" stroke-dasharray="3 3"/>
+<circle cx="340" cy="232" r="2" fill="#888780"/>
+<g>
+<rect x="400" y="204" width="230" height="56" rx="8" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>
+<text class="th" x="515" y="224" text-anchor="middle" dominant-baseline="central" fill="#791F1F">Anchor gate fires ~0.2%</text>
+<text class="ts" x="515" y="244" text-anchor="middle" dominant-baseline="central" fill="#791F1F">LLM fallback does ~100%</text>
+</g>
+
+<line x1="215" y1="264" x2="215" y2="288" stroke="#73726c" stroke-width="1.5" marker-end="url(#ssaArrow2)"/>
+
+<g>
+<rect x="90" y="288" width="250" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text class="th" x="215" y="310" text-anchor="middle" dominant-baseline="central" fill="#3C3489">Merge near-dups</text>
+<text class="ts" x="215" y="328" text-anchor="middle" dominant-baseline="central" fill="#3C3489">Jaccard 0.55 · keyword overlap</text>
+</g>
+<line x1="340" y1="316" x2="398" y2="316" stroke="#9c9a92" stroke-width="0.75" stroke-dasharray="3 3"/>
+<circle cx="340" cy="316" r="2" fill="#888780"/>
+<g>
+<rect x="400" y="294" width="230" height="44" rx="8" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+<text class="ts" x="515" y="316" text-anchor="middle" dominant-baseline="central" fill="#633806">0 folds in 14 days — dormant</text>
+</g>
+
+<line x1="215" y1="344" x2="215" y2="368" stroke="#73726c" stroke-width="1.5" marker-end="url(#ssaArrow2)"/>
+
+<g>
+<rect x="90" y="368" width="250" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text class="th" x="215" y="390" text-anchor="middle" dominant-baseline="central" fill="#3C3489">Analyze + synthesize</text>
+<text class="ts" x="215" y="408" text-anchor="middle" dominant-baseline="central" fill="#3C3489">per-topic + day-level LLM</text>
+</g>
+<line x1="340" y1="396" x2="398" y2="396" stroke="#9c9a92" stroke-width="0.75" stroke-dasharray="3 3"/>
+<circle cx="340" cy="396" r="2" fill="#888780"/>
+<g>
+<rect x="400" y="374" width="230" height="44" rx="8" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+<text class="ts" x="515" y="396" text-anchor="middle" dominant-baseline="central" fill="#633806">8 prompts: unrevised drafts</text>
+</g>
+
+<line x1="215" y1="424" x2="215" y2="448" stroke="#73726c" stroke-width="1.5" marker-end="url(#ssaArrow2)"/>
+
+<g>
+<rect x="90" y="448" width="250" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text class="th" x="215" y="470" text-anchor="middle" dominant-baseline="central" fill="#3C3489">Viewpoints + grounding</text>
+<text class="ts" x="215" y="488" text-anchor="middle" dominant-baseline="central" fill="#3C3489">deterministic · no LLM call</text>
+</g>
+
+<line x1="215" y1="504" x2="215" y2="528" stroke="#73726c" stroke-width="1.5" marker-end="url(#ssaArrow2)"/>
+
+<g>
+<rect x="90" y="528" width="250" height="56" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+<text class="th" x="215" y="550" text-anchor="middle" dominant-baseline="central" fill="#2C2C2A">Unified daily report</text>
+<text class="ts" x="215" y="568" text-anchor="middle" dominant-baseline="central" fill="#2C2C2A">admin-only · gated behind Plans</text>
+</g>
+</svg>
+<figcaption>Figure 2 — Pipeline C stage chain. Purple = Pipeline C stages; gray = output; red/amber = load-bearing gaps. Stage order follows the code-grounded architecture doc (see notes).</figcaption>
+</figure>
+
+<h3>Accompanying points</h3>
+<ul>
+<li><strong>Stage-order drift between two canonical docs.</strong> The route-before-merge ordering shown here follows the code-grounded architecture doc, where domain routing is Stage 4 and the Jaccard merge is Stage 5b. The narrative <code>system-reference</code> lists them the other way round — merge before routing. This is a live discrepancy to reconcile against the orchestrator code before anyone relies on the order.</li>
+<li><strong><code>unclassified</code> is a failure sentinel, not a domain.</strong> It is the LLM-failure-only sentinel (ADR 0007), set when the fallback returns an invalid response — not a first-class cross-lens domain.</li>
+<li><strong>Eight prompts, not nine.</strong> The shipped set is eight (seven canonical domains plus the unclassified fallback), enforced by the assertion in <code>pipeline_c_prompts.py</code>, even though the count is sometimes referred to as nine.</li>
+<li><strong>Routing reality.</strong> The anchor-centroid gate fires on roughly 0.2% of clusters; the <code>gpt-4.1-mini</code> fallback performs nearly all domain disambiguation. This is either intentional tight calibration or an anchor-drift signal — it has not been adjudicated.</li>
+<li><strong>Merge dormant.</strong> The Stage 5b Jaccard merge folded zero clusters across the 14 days ending 2026-05-13 (confounded by the sub-floor coverage period). It remains a safety net, not a load-bearing quality lever.</li>
+<li><strong>Prompts are starter drafts.</strong> The eight per-domain prompts and the synthesis prompt that ship today are Replit-authored starter drafts pending the analyst-revision pass.</li>
+</ul>
+
+<p class="ssa-legend"><strong>Color key (both figures).</strong> Overview: amber = operator/admin surfaces, teal = Pipeline B, purple = Pipeline C, coral = the one client app, blue = external services, gray = neutral I/O. Internals: purple = Pipeline C stages, gray = output, red/amber = flagged gaps.</p>
+
+</section>
+<!-- ============ END PORTABLE SECTION ============ -->
+
+</body>
+</html>
