@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<!-- saved from url=(0239)file:///Users/muhanned/Library/Application%20Support/Claude/local-agent-mode-sessions/6d4c9d27-0b48-42a5-bfa0-cf5ad9bdea17/11f4dc6e-33b2-4a58-a74d-31927a440623/local_38e58438-1c09-4e41-b24a-475764ebe2b9/outputs/SSA_Improvement_Roadmap.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSA — Technical Improvement Roadmap</title>
+<style>
+  :root{
+    --ink:#1e293b; --muted:#64748b; --line:#e2e8f0; --head:#0f172a; --headink:#f8fafc;
+    --crit:#dc2626; --crit-bg:#fee2e2; --high:#ea580c; --high-bg:#ffedd5;
+    --med:#ca8a04; --med-bg:#fef9c3; --low:#16a34a; --low-bg:#dcfce7;
+    --before:#1d4ed8; --before-bg:#dbeafe; --after:#7c3aed; --after-bg:#ede9fe;
+    --ok:#16a34a; --ok-bg:#dcfce7;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:linear-gradient(180deg,#f1f5f9 0%,#e2e8f0 100%);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink); line-height:1.5; padding:32px 18px;}
+  .wrap{max-width:1700px;margin:0 auto;}
+  header.title{background:var(--head); color:var(--headink); border-radius:16px; padding:30px 34px; box-shadow:0 12px 30px rgba(15,23,42,.18);}
+  header.title h1{margin:0 0 6px; font-size:26px; letter-spacing:-.01em;}
+  header.title p{margin:0; color:#cbd5e1; font-size:14.5px;}
+  .meta{margin-top:14px; font-size:12.5px; color:#94a3b8;}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; margin:22px 0 8px; align-items:center; font-size:13px; color:var(--muted);}
+  .pill{display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:700; white-space:nowrap;}
+  .p-crit{background:var(--crit-bg); color:var(--crit);} .p-high{background:var(--high-bg); color:var(--high);}
+  .p-med{background:var(--med-bg); color:var(--med);} .p-low{background:var(--low-bg); color:var(--low);}
+  .seq-before{background:var(--before-bg); color:var(--before);} .seq-after{background:var(--after-bg); color:var(--after);}
+  .overall{display:flex; align-items:center; gap:12px; margin:10px 0 4px; font-size:13px; color:var(--muted);}
+  .bar{flex:0 0 240px; height:10px; background:#e2e8f0; border-radius:999px; overflow:hidden;}
+  .bar > i{display:block; height:100%; width:0; background:linear-gradient(90deg,#2563eb,#16a34a); transition:width .25s;}
+  .card{background:#fff; border-radius:16px; margin-top:14px; overflow:hidden; box-shadow:0 6px 22px rgba(15,23,42,.08); border:1px solid var(--line);}
+  .scroll{overflow-x:auto;}
+  table{border-collapse:collapse; width:100%; min-width:1480px; font-size:13px;}
+  thead th{position:sticky; top:0; background:var(--head); color:var(--headink); text-align:left; padding:12px 12px;
+    font-size:12px; letter-spacing:.02em; text-transform:uppercase; font-weight:700; border-right:1px solid #1e293b; z-index:2;}
+  thead th:last-child{border-right:none;}
+  tbody td{padding:13px 12px; border-bottom:1px solid var(--line); border-right:1px solid var(--line); vertical-align:top;}
+  tbody td:last-child{border-right:none;}
+  tbody tr:nth-child(even){background:#fbfcfe;}
+  .item-name{font-weight:700; color:var(--ink);}
+  .item-tag{display:block; margin-top:4px; font-size:11px; color:var(--muted); font-family:ui-monospace,Menlo,monospace;}
+  .rowprog{display:inline-block; margin-top:8px; font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; background:#f1f5f9; color:var(--muted);}
+  .rowprog.done{background:var(--ok-bg); color:var(--ok);}
+  .tf{font-weight:600;} .tf small{display:block; color:var(--muted); font-weight:400; font-size:11.5px;}
+  .plain{color:#334155;} .ex{color:#475569;}
+  .ex code,.plain code{font-family:ui-monospace,Menlo,monospace; font-size:11.5px; background:#f1f5f9; padding:1px 5px; border-radius:4px; color:#0f172a;}
+  ul.chk{list-style:none; margin:0; padding:0;}
+  ul.chk li{margin:0 0 7px; display:flex; gap:7px; align-items:flex-start;}
+  ul.chk input{margin:2px 0 0; width:15px; height:15px; flex:0 0 auto; cursor:pointer; accent-color:#2563eb;}
+  ul.chk label{cursor:pointer; font-size:12.5px; color:#334155;}
+  ul.chk input:checked + label{color:#16a34a; text-decoration:line-through; text-decoration-color:#86efac;}
+  .test li label{color:#3730a3;}
+  .test input:checked + label{color:#16a34a;}
+  .test .exp{display:block; color:var(--muted); font-size:11px; font-style:italic; margin-top:1px;}
+  .phase-row td{background:#0f172a; color:#e2e8f0; font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:.04em; padding:10px 12px;}
+  .controls{margin:14px 0 0; display:flex; gap:10px; flex-wrap:wrap;}
+  .btn{border:1px solid var(--line); background:#fff; color:#334155; padding:7px 13px; border-radius:9px; font-size:12.5px; cursor:pointer; font-weight:600;}
+  .btn:hover{background:#f1f5f9;}
+  footer{margin-top:18px; font-size:12px; color:var(--muted); text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="title">
+    <h1>Social Studio Analytics — Technical Improvement Roadmap</h1>
+    <p>Prioritized actions from the end-to-end audit — now with subtask checklists and verification tests, sequenced around the Google Cloud migration.</p>
+    <div class="meta">Prepared by: Senior Cloud Architect &amp; Technical Auditor · June 2026 · Tick items to track progress (saved in your browser).</div>
+  </header>
+
+  <div class="legend">
+    <strong style="color:var(--ink)">Priority:</strong>
+    <span class="pill p-crit">Critical</span><span class="pill p-high">High</span><span class="pill p-med">Medium</span><span class="pill p-low">Low</span>
+    <span style="width:10px"></span>
+    <strong style="color:var(--ink)">Migration:</strong>
+    <span class="pill seq-before">Before move</span><span class="pill seq-after">After / during move</span>
+  </div>
+  <div class="overall"><strong style="color:var(--ink)">Overall progress</strong><span class="bar"><i id="ovbar" style="width: 5%;"></i></span><span id="ovtxt">6 / 121  (5%)</span></div>
+  <div class="controls">
+    <button class="btn" onclick="setAll(true)">Check all</button>
+    <button class="btn" onclick="setAll(false)">Clear all</button>
+    <button class="btn" onclick="resetAll()">Reset saved progress</button>
+  </div>
+
+  <div class="card"><div class="scroll">
+  <table>
+    <thead>
+      <tr>
+        <th style="min-width:180px">Improvement Item</th>
+        <th style="min-width:80px">Priority</th>
+        <th style="min-width:110px">Complexity &amp; Timeframe</th>
+        <th style="min-width:95px">GCP Sequence</th>
+        <th style="min-width:240px">Explanation</th>
+        <th style="min-width:250px">Scenario (from your project)</th>
+        <th style="min-width:280px">Subtasks (checklist)</th>
+        <th style="min-width:300px">Testing Scenarios</th>
+      </tr>
+    </thead>
+    <tbody>
+
+      <tr class="phase-row"><td colspan="8">Phase 1 — Immediate fixes (do first, mostly quick)</td></tr>
+
+      <tr>
+        <td><span class="item-name">Remove hardcoded date ranges</span><span class="item-tag">dashboard_router.py · embedding sender</span><br><span class="rowprog" data-prog="">2 / 7 done</span></td>
+        <td><span class="pill p-crit">Critical</span></td>
+        <td class="tf">Low<small>1–2 days</small></td>
+        <td><span class="pill seq-before">Before</span></td>
+        <td class="plain">Calendar dates are baked into the code, so it keeps analyzing the same old days unless edited every run — silently producing outdated reports.</td>
+        <td class="ex"><code>dashboard_router.py</code> is fixed to <code>DATE_FROM = "2026-04-13"</code>; run routing today and today’s posts never reach the dashboard.</td>
+        <td><ul class="chk">
+          <li><input type="checkbox" id="c1a"><label for="c1a">Replace literal <code>DATE_FROM/DATE_TO</code> in <code>dashboard_router.py</code> with env/CLI params</label></li>
+          <li><input type="checkbox" id="c1b"><label for="c1b">Same for <code>oneshot_embedding_dashboard_aws_sender.py</code> &amp; <code>run_similarity_and_routing_once.py</code></label></li>
+          <li><input type="checkbox" id="c1c"><label for="c1c">Add runtime default = “yesterday / last N hours”</label></li>
+          <li><input type="checkbox" id="c1d"><label for="c1d">Repo-wide grep to confirm no literal dates remain</label></li>
+        </ul></td>
+        <td><ul class="chk test">
+          <li><input type="checkbox" id="t1a"><label for="t1a">Run with no date args<span class="exp">Expected: processes yesterday’s window (verify DB count + logs)</span></label></li>
+          <li><input type="checkbox" id="t1b"><label for="t1b">Run with <code>--from/--to</code><span class="exp">Expected: only that window’s posts updated</span></label></li>
+          <li><input type="checkbox" id="t1c"><label for="t1c"><code>grep "202[0-9]-[0-9]"</code><span class="exp">Expected: no production date literals returned</span></label></li>
+        </ul></td>
+      </tr>
+
+      <tr>
+        <td><span class="item-name">Move secrets to a secure vault &amp; rotate</span><span class="item-tag">.env → Secret Manager</span><br><span class="rowprog" data-prog="">0 / 7 done</span></td>
+        <td><span class="pill p-crit">Critical</span></td>
+        <td class="tf">Low<small>1–2 days</small></td>
+        <td><span class="pill seq-before">Before</span></td>
+        <td class="plain">Keys are stored in plain text in the project files; anyone opening the folder can use them. They belong in a vault, and exposed ones must be replaced.</td>
+        <td class="ex">Each service ships a plaintext <code>.env</code> (OpenAI key, Mongo URI); live Telegram session strings were even shared in chat.</td>
+        <td><ul class="chk">
+          <li><input type="checkbox" id="c2a"><label for="c2a">Inventory every secret across all <code>.env</code> files</label></li>
+          <li><input type="checkbox" id="c2b"><label for="c2b">Create Secret Manager entries; inject at deploy</label></li>
+          <li><input type="checkbox" id="c2c"><label for="c2c">Remove <code>.env</code> from repo &amp; purge from git history</label></li>
+          <li><input type="checkbox" id="c2d"><label for="c2d">Rotate OpenAI keys, Mongo password, Telegram sessions</label></li>
+        </ul></td>
+        <td><ul class="chk test">
+          <li><input type="checkbox" id="t2a"><label for="t2a">Start app with no local <code>.env</code><span class="exp">Expected: boots, pulling secrets from the vault</span></label></li>
+          <li><input type="checkbox" id="t2b"><label for="t2b">Scan git history for secret values<span class="exp">Expected: none found</span></label></li>
+          <li><input type="checkbox" id="t2c"><label for="t2c">Try old rotated key<span class="exp">Expected: authentication rejected</span></label></li>
+        </ul></td>
+      </tr>
+
+      <tr>
+        <td><span class="item-name">Replace default DB password &amp; close admin panel</span><span class="item-tag">docker-compose · Mongo-Express</span><br><span class="rowprog" data-prog="">0 / 7 done</span></td>
+        <td><span class="pill p-crit">Critical</span></td>
+        <td class="tf">Low<small>&lt;1 day</small></td>
+        <td><span class="pill seq-before">Before</span></td>
+        <td class="plain">A well-known default password protects the DB, and an admin panel is reachable with it — an open door to all data.</td>
+        <td class="ex"><code>docker-compose.yml</code> uses <code>adminpassword123</code> and exposes Mongo-Express on <code>:9081</code> with the same login.</td>
+        <td><ul class="chk">
+          <li><input type="checkbox" id="c3a"><label for="c3a">Set a strong unique Mongo root password</label></li>
+          <li><input type="checkbox" id="c3b"><label for="c3b">Remove hardcoded creds from compose; use secret/env</label></li>
+          <li><input type="checkbox" id="c3c"><label for="c3c">Remove or firewall Mongo-Express (no public <code>:9081</code>)</label></li>
+          <li><input type="checkbox" id="c3d"><label for="c3d">Confirm no service still uses the old password</label></li>
+        </ul></td>
+        <td><ul class="chk test">
+          <li><input type="checkbox" id="t3a"><label for="t3a">Connect with <code>adminpassword123</code><span class="exp">Expected: access denied</span></label></li>
+          <li><input type="checkbox" id="t3b"><label for="t3b">Hit <code>:9081</code> from public network<span class="exp">Expected: unreachable</span></label></li>
+          <li><input type="checkbox" id="t3c"><label for="t3c">All services connect with new credential<span class="exp">Expected: healthy</span></label></li>
+        </ul></td>
+      </tr>
+
+      <tr>
+        <td><span class="item-name">De-duplicate posts before AI analysis</span><span class="item-tag">similarity → NLP + cache</span><br><span class="rowprog" data-prog="">4 / 7 done</span></td>
+        <td><span class="pill p-high">High</span></td>
+        <td class="tf">Medium<small>~1 week</small></td>
+        <td><span class="pill seq-before">Before</span></td>
+        <td class="plain">The AI is paid to read near-identical posts repeatedly. Filtering duplicates first is the single biggest cost saving available.</td>
+        <td class="ex">A press release reposted across 40 accounts is sent to OpenAI individually because similarity runs <em>after</em> NLP.</td>
+        <td><ul class="chk">
+          <li><input type="checkbox" id="c4a"><label for="c4a">Run similarity/dedup before NLP</label></li>
+          <li><input type="checkbox" id="c4b"><label for="c4b">Cache by <code>content_stem</code> hash; skip OpenAI on a hit</label></li>
+          <li><input type="checkbox" id="c4c"><label for="c4c">Tag duplicates with <code>dup_group_id</code>; analyze one representative</label></li>
+          <li><input type="checkbox" id="c4d"><label for="c4d">Guard against re-analyzing already-processed posts</label></li>
+        </ul></td>
+        <td><ul class="chk test">
+          <li><input type="checkbox" id="t4a"><label for="t4a">Ingest 50 identical posts<span class="exp">Expected: exactly 1 OpenAI call</span></label></li>
+          <li><input type="checkbox" id="t4b"><label for="t4b">Compare daily token usage<span class="exp">Expected: measurable drop</span></label></li>
+          <li><input type="checkbox" id="t4c"><label for="t4c">Inspect duplicates<span class="exp">Expected: shared <code>dup_group_id</code>, one carries NLP fields</span></label></li>
+        </ul></td>
+      </tr>
+
+      <tr>
+        <td><span class="item-name">Add database indexes</span><span class="item-tag">posts: status, date, section</span><br><span class="rowprog" data-prog="">0 / 6 done</span></td>
+        <td><span class="pill p-high">High</span></td>
+        <td class="tf">Low<small>1–2 days</small></td>
+        <td><span class="pill seq-before">Before</span></td>
+        <td class="plain">No quick-lookup shortcuts for the filtered fields, so the DB scans everything — slower and pricier as data grows.</td>
+        <td class="ex">The NLP poller scans the growing <code>posts</code> collection each cycle because the analysis-status fields aren’t indexed.</td>
+        <td><ul class="chk">
+          <li><input type="checkbox" id="c5a"><label for="c5a">Add <code>{analyzed:1, posted_at:1}</code></label></li>
+          <li><input type="checkbox" id="c5b"><label for="c5b">Add <code>{similarity_status:1}</code> &amp; <code>{dashboard_section:1, posted_at:1}</code></label></li>
+          <li><input type="checkbox" id="c5c"><label for="c5c">Add index creation to a startup/migration script</label></li>
+        </ul></td>
+        <td><ul class="chk test">
+          <li><input type="checkbox" id="t5a"><label for="t5a"><code>explain()</code> the poller query<span class="exp">Expected: IXSCAN, not COLLSCAN</span></label></li>
+          <li><input type="checkbox" id="t5b"><label for="t5b">Measure cycle latency on a large collection<span class="exp">Expected: noticeably faster</span></label></li>
+          <li><input type="checkbox" id="t5c"><label for="t5c">Fresh deploy<span class="exp">Expected: indexes present automatically</span></label></li>
+        </ul></td>
+      </tr>
+
+      <tr>
+        <td><span class="item-name">Standardize the database name</span><span class="item-tag">unify DATABASE_NAME</span><br><span class="rowprog" data-prog="">0 / 6 done</span></td>
+        <td><span class="pill p-high">High</span></td>
+        <td class="tf">Low<small>&lt;1 day</small></td>
+        <td><span class="pill seq-before">Before</span></td>
+        <td class="plain">Different parts assume different DB names, so data can quietly end up in the wrong place and look “missing.”</td>
+        <td class="ex"><code>similarity_engine.py</code> defaults to <code>socialscraper</code> while others use <code>fastapi_db</code>/<code>socialstudio</code>.</td>
+        <td><ul class="chk">
+          <li><input type="checkbox" id="c6a"><label for="c6a">Pick one canonical name (<code>ssa-mongo</code> for the Firestore target)</label></li>
+          <li><input type="checkbox" id="c6b"><label for="c6b">Remove divergent defaults; read from one shared config</label></li>
+          <li><input type="checkbox" id="c6c"><label for="c6c">Fail fast if <code>DATABASE_NAME</code> is unset</label></li>
+        </ul></td>
+        <td><ul class="chk test">
+          <li><input type="checkbox" id="t6a"><label for="t6a">Start with <code>DATABASE_NAME</code> unset<span class="exp">Expected: clear startup error, refuses to run</span></label></li>
+          <li><input type="checkbox" id="t6b"><label for="t6b">Check each service’s logged DB name<span class="exp">Expected: identical everywhere</span></label></li>
+          <li><input type="checkbox" id="t6c"><label for="t6c">Scraper writes → NLP reads<span class="exp">Expected: same DB, end-to-end</span></label></li>
+        </ul></td>
+      </tr>
+
+      <tr class="phase-row"><td colspan="8">Phase 2 — Stability &amp; cost control</td></tr>
+
+      <tr>
+        <td><span class="item-name">Consolidate manual scripts into one tool</span><span class="item-tag">single CLI + shared lib</span><br><span class="rowprog" data-prog="">0 / 7 done</span></td>
+        <td><span class="pill p-high">High</span></td>
+        <td class="tf">Medium<small>1–2 weeks</small></td>
+        <td><span class="pill seq-before">Before</span></td>
+        <td class="plain">Many hand-launched scripts; one person knows which to run. One clear tool removes that single-person dependency.</td>
+        <td class="ex">Backfilling means choosing among <code>reprocess_all_posts_openai.py</code>, <code>run_similarity_and_routing_once.py</code>, etc., each with its own <code>MongoClient</code>.</td>
+        <td><ul class="chk">
+          <li><input type="checkbox" id="c7a"><label for="c7a">Create shared <code>db.py</code> + <code>config.py</code></label></li>
+          <li><input type="checkbox" id="c7b"><label for="c7b">Build one CLI: <code>pipeline run --stage --from --to</code></label></li>
+          <li><input type="checkbox" id="c7c"><label for="c7c">Migrate one-shot scripts into subcommands</label></li>
+          <li><input type="checkbox" id="c7d"><label for="c7d">Remove duplicate <code>MongoClient</code> instantiations; document in README</label></li>
+        </ul></td>
+        <td><ul class="chk test">
+          <li><input type="checkbox" id="t7a"><label for="t7a"><code>pipeline run --stage nlp …</code><span class="exp">Expected: reproduces old script output</span></label></li>
+          <li><input type="checkbox" id="t7b"><label for="t7b">Grep for client creation<span class="exp">Expected: one shared factory used everywhere</span></label></li>
+          <li><input type="checkbox" id="t7c"><label for="t7c">New operator runs a backfill from README only<span class="exp">Expected: succeeds without tribal knowledge</span></label></li>
+        </ul></td>
+      </tr>
+
+      <tr>
+        <td><span class="item-name">Switch always-on servers to scheduled jobs</span><span class="item-tag">Cloud Run Jobs + Scheduler</span><br><span class="rowprog" data-prog="">0 / 7 done</span></td>
+        <td><span class="pill p-high">High</span></td>
+        <td class="tf">Medium<small>~1 week</small></td>
+        <td><span class="pill seq-after">After</span></td>
+        <td class="plain">Servers run 24/7 even when idle, so you pay for nothing. On GCP they run only when needed.</td>
+        <td class="ex"><code>ss-data-scraper</code> &amp; <code>ss-data-nlp</code> run as <code>restart: unless-stopped</code> polling all night.</td>
+        <td><ul class="chk">
+          <li><input type="checkbox" id="c8a"><label for="c8a">Refactor scraper to scrape-then-exit</label></li>
+          <li><input type="checkbox" id="c8b"><label for="c8b">Refactor NLP to batch backlog then exit</label></li>
+          <li><input type="checkbox" id="c8c"><label for="c8c">Deploy both as Cloud Run Jobs</label></li>
+          <li><input type="checkbox" id="c8d"><label for="c8d">Add Cloud Scheduler triggers (30 min / nightly)</label></li>
+        </ul></td>
+        <td><ul class="chk test">
+          <li><input type="checkbox" id="t8a"><label for="t8a">Run a job manually<span class="exp">Expected: processes window, exits 0</span></label></li>
+          <li><input type="checkbox" id="t8b"><label for="t8b">Check between runs<span class="exp">Expected: nothing running, idle cost ~0</span></label></li>
+          <li><input type="checkbox" id="t8c"><label for="t8c">Inspect scheduler history<span class="exp">Expected: triggers fire on schedule</span></label></li>
+        </ul></td>
+      </tr>
+
+      <tr>
+        <td><span class="item-name">Use a pay-per-use database</span><span class="item-tag">Firestore (MongoDB-compatible)</span><br><span class="rowprog" data-prog="">0 / 7 done</span></td>
+        <td><span class="pill p-high">High</span></td>
+        <td class="tf">Medium<small>~1 week</small></td>
+        <td><span class="pill seq-after">After</span></td>
+        <td class="plain">Pay only for what’s used instead of renting a DB around the clock — big saving for bursty workloads.</td>
+        <td class="ex"><code>posts</code> &amp; <code>dashboard_*</code> live in an always-on Mongo that bills through the quiet hours.</td>
+        <td><ul class="chk">
+          <li><input type="checkbox" id="c9a"><label for="c9a">Provision Firestore MongoDB-compat (<code>ssa-mongo</code>) ✓ created</label></li>
+          <li><input type="checkbox" id="c9b"><label for="c9b">Point services at it via <code>MONGODB_URI</code> secret</label></li>
+          <li><input type="checkbox" id="c9c"><label for="c9c">Validate pymongo operations &amp; change-stream usage</label></li>
+          <li><input type="checkbox" id="c9d"><label for="c9d">Decommission the always-on Mongo</label></li>
+        </ul></td>
+        <td><ul class="chk test">
+          <li><input type="checkbox" id="t9a"><label for="t9a">Read/write smoke test<span class="exp">Expected: succeeds against Firestore</span></label></li>
+          <li><input type="checkbox" id="t9b"><label for="t9b">Full pipeline run<span class="exp">Expected: end-to-end works on new DB</span></label></li>
+          <li><input type="checkbox" id="t9c"><label for="t9c">Watch billing over a quiet day<span class="exp">Expected: idle cost trends to ~0</span></label></li>
+        </ul></td>
+      </tr>
+
+      <tr>
+        <td><span class="item-name">Add monitoring, alerts &amp; cost dashboard</span><span class="item-tag">Cloud Monitoring + budgets</span><br><span class="rowprog" data-prog="">0 / 6 done</span></td>
+        <td><span class="pill p-high">High</span></td>
+        <td class="tf">Medium<small>~1 week</small></td>
+        <td><span class="pill seq-after">After</span></td>
+        <td class="plain">Nothing warns when the pipeline stalls or spend spikes. Dashboards + alerts catch problems before they cost money.</td>
+        <td class="ex">Only <code>loguru</code>/print logs exist; a stalled poller or exhausted OpenAI keys go unnoticed until the dashboard stops updating.</td>
+        <td><ul class="chk">
+          <li><input type="checkbox" id="c10a"><label for="c10a">Emit metrics: posts processed, errors, OpenAI cost</label></li>
+          <li><input type="checkbox" id="c10b"><label for="c10b">Build Cloud Monitoring dashboards</label></li>
+          <li><input type="checkbox" id="c10c"><label for="c10c">Alerts: pipeline stall, error spike, budget threshold</label></li>
+        </ul></td>
+        <td><ul class="chk test">
+          <li><input type="checkbox" id="t10a"><label for="t10a">Force an error<span class="exp">Expected: alert fires</span></label></li>
+          <li><input type="checkbox" id="t10b"><label for="t10b">Stop the scraper<span class="exp">Expected: stall alert within threshold</span></label></li>
+          <li><input type="checkbox" id="t10c"><label for="t10c">Open the cost dashboard<span class="exp">Expected: daily OpenAI spend visible</span></label></li>
+        </ul></td>
+      </tr>
+
+      <tr>
+        <td><span class="item-name">Set up backups &amp; recovery plan</span><span class="item-tag">backup + tested restore + DR</span><br><span class="rowprog" data-prog="">0 / 6 done</span></td>
+        <td><span class="pill p-high">High</span></td>
+        <td class="tf">Medium<small>~1 week</small></td>
+        <td><span class="pill seq-after">After</span></td>
+        <td class="plain">No tested copy to fall back on if data is deleted or corrupted. A verified backup makes the business recoverable.</td>
+        <td class="ex">All <code>posts</code> &amp; <code>dashboard_*</code> live in one Mongo with no documented backup.</td>
+        <td><ul class="chk">
+          <li><input type="checkbox" id="c11a"><label for="c11a">Enable scheduled backups / point-in-time recovery</label></li>
+          <li><input type="checkbox" id="c11b"><label for="c11b">Document the restore procedure</label></li>
+          <li><input type="checkbox" id="c11c"><label for="c11c">Define RPO/RTO targets</label></li>
+        </ul></td>
+        <td><ul class="chk test">
+          <li><input type="checkbox" id="t11a"><label for="t11a">Run a restore drill to a scratch DB<span class="exp">Expected: data recovered to a point in time</span></label></li>
+          <li><input type="checkbox" id="t11b"><label for="t11b">Check backup schedule<span class="exp">Expected: enabled &amp; running</span></label></li>
+          <li><input type="checkbox" id="t11c"><label for="t11c">Time the drill<span class="exp">Expected: meets RPO/RTO</span></label></li>
+        </ul></td>
+      </tr>
+
+      <tr>
+        <td><span class="item-name">Harden container &amp; access permissions</span><span class="item-tag">non-root, least-privilege</span><br><span class="rowprog" data-prog="">0 / 7 done</span></td>
+        <td><span class="pill p-med">Medium</span></td>
+        <td class="tf">Low–Med<small>2–4 days</small></td>
+        <td><span class="pill seq-after">After</span></td>
+        <td class="plain">Apps run with maximum privileges and a dev setting left on. Tightening limits the blast radius of any compromise.</td>
+        <td class="ex"><code>ss-core-api</code> runs <code>uvicorn … --reload</code> as root; only <code>ss-data-nlp</code> uses a non-root user.</td>
+        <td><ul class="chk">
+          <li><input type="checkbox" id="c12a"><label for="c12a">Remove <code>--reload</code> from prod CMD</label></li>
+          <li><input type="checkbox" id="c12b"><label for="c12b">Run all images as non-root</label></li>
+          <li><input type="checkbox" id="c12c"><label for="c12c">Pin base images + add image scanning</label></li>
+          <li><input type="checkbox" id="c12d"><label for="c12d">Least-privilege DB user per service</label></li>
+        </ul></td>
+        <td><ul class="chk test">
+          <li><input type="checkbox" id="t12a"><label for="t12a"><code>whoami</code> in container<span class="exp">Expected: non-root</span></label></li>
+          <li><input type="checkbox" id="t12b"><label for="t12b">Inspect prod image CMD<span class="exp">Expected: no <code>--reload</code></span></label></li>
+          <li><input type="checkbox" id="t12c"><label for="t12c">Run image scan<span class="exp">Expected: no critical CVEs</span></label></li>
+        </ul></td>
+      </tr>
+
+      <tr class="phase-row"><td colspan="8">Phase 3 — Scalability (toward 100k posts/day)</td></tr>
+
+      <tr>
+        <td><span class="item-name">Add a work queue between stages</span><span class="item-tag">Pub/Sub + parallel workers</span><br><span class="rowprog" data-prog="">0 / 7 done</span></td>
+        <td><span class="pill p-high">High</span></td>
+        <td class="tf">High<small>1–2 months</small></td>
+        <td><span class="pill seq-after">After</span></td>
+        <td class="plain">Stages hand off rigidly, so a surge jams the line. A queue buffers work and lets workers share the load.</td>
+        <td class="ex">Stages coordinate via status flags in <code>posts</code>; a hot-window burst floods it faster than the single NLP poller drains it.</td>
+        <td><ul class="chk">
+          <li><input type="checkbox" id="c13a"><label for="c13a">Add a Pub/Sub topic per stage handoff</label></li>
+          <li><input type="checkbox" id="c13b"><label for="c13b">Publish post ids on scrape; workers subscribe</label></li>
+          <li><input type="checkbox" id="c13c"><label for="c13c">Make workers horizontally scalable + idempotent</label></li>
+          <li><input type="checkbox" id="c13d"><label for="c13d">Add a dead-letter queue</label></li>
+        </ul></td>
+        <td><ul class="chk test">
+          <li><input type="checkbox" id="t13a"><label for="t13a">Inject 100k posts<span class="exp">Expected: no stage stalls; backlog drains</span></label></li>
+          <li><input type="checkbox" id="t13b"><label for="t13b">Kill a worker mid-run<span class="exp">Expected: message redelivered, no duplicate result</span></label></li>
+          <li><input type="checkbox" id="t13c"><label for="t13c">Send a poison message<span class="exp">Expected: lands in dead-letter queue</span></label></li>
+        </ul></td>
+      </tr>
+
+      <tr>
+        <td><span class="item-name">Run the heavy “storyline” analysis separately</span><span class="item-tag">on-demand GPU batch</span><br><span class="rowprog" data-prog="">0 / 7 done</span></td>
+        <td><span class="pill p-high">High</span></td>
+        <td class="tf">Medium<small>1–2 weeks</small></td>
+        <td><span class="pill seq-after">After</span></td>
+        <td class="plain">The heaviest step runs glued to everything else and can crash the service. It should run on its own, only when needed.</td>
+        <td class="ex"><code>embedding_stage.py</code> loads <code>e5-large</code> + UMAP + HDBSCAN inside the same service that does per-post enrichment.</td>
+        <td><ul class="chk">
+          <li><input type="checkbox" id="c14a"><label for="c14a">Extract <code>embedding_stage</code> into its own job/image</label></li>
+          <li><input type="checkbox" id="c14b"><label for="c14b">Give it a GPU / large-memory profile, on-demand</label></li>
+          <li><input type="checkbox" id="c14c"><label for="c14c">Decouple from the enrichment listener</label></li>
+          <li><input type="checkbox" id="c14d"><label for="c14d">Trigger after scrape/NLP via orchestration</label></li>
+        </ul></td>
+        <td><ul class="chk test">
+          <li><input type="checkbox" id="t14a"><label for="t14a">Stall the embedding job<span class="exp">Expected: enrichment keeps running</span></label></li>
+          <li><input type="checkbox" id="t14b"><label for="t14b">Run a large window on GPU<span class="exp">Expected: completes within target time</span></label></li>
+          <li><input type="checkbox" id="t14c"><label for="t14c">Watch enrichment memory during clustering<span class="exp">Expected: stays flat</span></label></li>
+        </ul></td>
+      </tr>
+
+      <tr>
+        <td><span class="item-name">Send AI requests in batches</span><span class="item-tag">async, rate-limited OpenAI pool</span><br><span class="rowprog" data-prog="">0 / 7 done</span></td>
+        <td><span class="pill p-high">High</span></td>
+        <td class="tf">Medium<small>~1 week</small></td>
+        <td><span class="pill seq-after">After</span></td>
+        <td class="plain">AI requests go one at a time — slow and pricier. Grouping and parallelizing speeds processing and lowers cost.</td>
+        <td class="ex"><code>analyze_post()</code> is called once per post in the loop; keys are rotated one at a time, so backlogs run serially.</td>
+        <td><ul class="chk">
+          <li><input type="checkbox" id="c15a"><label for="c15a">Concurrency-limited async OpenAI client</label></li>
+          <li><input type="checkbox" id="c15b"><label for="c15b">Batch prompts where possible</label></li>
+          <li><input type="checkbox" id="c15c"><label for="c15c">Respect rate limits with retry/backoff</label></li>
+          <li><input type="checkbox" id="c15d"><label for="c15d">Use all keys concurrently</label></li>
+        </ul></td>
+        <td><ul class="chk test">
+          <li><input type="checkbox" id="t15a"><label for="t15a">Process a backlog of N posts<span class="exp">Expected: parallel, higher throughput</span></label></li>
+          <li><input type="checkbox" id="t15b"><label for="t15b">Run under load<span class="exp">Expected: no 429 rate-limit failures</span></label></li>
+          <li><input type="checkbox" id="t15c"><label for="t15c">Compare cost/post<span class="exp">Expected: stable or lower</span></label></li>
+        </ul></td>
+      </tr>
+
+      <tr class="phase-row"><td colspan="8">Phase 4 — Productization (sell, operate, scale to clients)</td></tr>
+
+      <tr>
+        <td><span class="item-name">Add automated tests &amp; release checks</span><span class="item-tag">unit tests + CI gates</span><br><span class="rowprog" data-prog="">0 / 6 done</span></td>
+        <td><span class="pill p-high">High</span></td>
+        <td class="tf">Medium<small>2–3 weeks</small></td>
+        <td><span class="pill seq-after">After</span></td>
+        <td class="plain">No automatic safety checks, so a small change can silently break something until a client notices.</td>
+        <td class="ex">A wrong edit to <code>SECTION_TO_COLLECTION</code> in <code>dashboard_router.py</code> could misroute posts with nothing to catch it.</td>
+        <td><ul class="chk">
+          <li><input type="checkbox" id="c16a"><label for="c16a">Unit tests per stage (scrape/normalize/NLP/similarity/route)</label></li>
+          <li><input type="checkbox" id="c16b"><label for="c16b">Fixture data for each stage</label></li>
+          <li><input type="checkbox" id="c16c"><label for="c16c">CI runs tests on every PR; block merge on failure</label></li>
+        </ul></td>
+        <td><ul class="chk test">
+          <li><input type="checkbox" id="t16a"><label for="t16a">Break <code>SECTION_TO_COLLECTION</code> on purpose<span class="exp">Expected: a test fails</span></label></li>
+          <li><input type="checkbox" id="t16b"><label for="t16b">Open the bad PR<span class="exp">Expected: CI blocks the merge</span></label></li>
+          <li><input type="checkbox" id="t16c"><label for="t16c">Check coverage<span class="exp">Expected: critical stages above target</span></label></li>
+        </ul></td>
+      </tr>
+
+      <tr>
+        <td><span class="item-name">Data governance: retention &amp; compliance</span><span class="item-tag">PII, retention, ToS</span><br><span class="rowprog" data-prog="">0 / 7 done</span></td>
+        <td><span class="pill p-high">High</span></td>
+        <td class="tf">Medium<small>ongoing</small></td>
+        <td><span class="pill seq-after">After</span></td>
+        <td class="plain">No rules for what personal data is collected, how long it’s kept, or the legal basis — a real compliance/reputation risk.</td>
+        <td class="ex">Scraped posts, account <code>profiles</code>, and Telegram session credentials are stored indefinitely with no retention policy.</td>
+        <td><ul class="chk">
+          <li><input type="checkbox" id="c17a"><label for="c17a">Define retention windows per collection</label></li>
+          <li><input type="checkbox" id="c17b"><label for="c17b">Implement TTL / archival jobs</label></li>
+          <li><input type="checkbox" id="c17c"><label for="c17c">PII handling + access policy</label></li>
+          <li><input type="checkbox" id="c17d"><label for="c17d">Legal review of scraping/ToS + lawful-basis doc</label></li>
+        </ul></td>
+        <td><ul class="chk test">
+          <li><input type="checkbox" id="t17a"><label for="t17a">Age data past retention<span class="exp">Expected: auto-archived/deleted</span></label></li>
+          <li><input type="checkbox" id="t17b"><label for="t17b">Attempt over-broad access<span class="exp">Expected: blocked by policy</span></label></li>
+          <li><input type="checkbox" id="t17c"><label for="t17c">Audit docs<span class="exp">Expected: retention/compliance doc signed off</span></label></li>
+        </ul></td>
+      </tr>
+
+      <tr>
+        <td><span class="item-name">Add backup providers for key services</span><span class="item-tag">LLM / scraper fallback</span><br><span class="rowprog" data-prog="">0 / 7 done</span></td>
+        <td><span class="pill p-med">Medium</span></td>
+        <td class="tf">Medium<small>2–3 weeks</small></td>
+        <td><span class="pill seq-after">After</span></td>
+        <td class="plain">Total reliance on a few vendors. If one raises prices or cuts access, operations stop. Alternatives keep the service running.</td>
+        <td class="ex">Enrichment calls only OpenAI; the flowchart lists Gemini as an alternative but no code path uses it.</td>
+        <td><ul class="chk">
+          <li><input type="checkbox" id="c18a"><label for="c18a">Abstract the LLM behind an interface (OpenAI + Gemini)</label></li>
+          <li><input type="checkbox" id="c18b"><label for="c18b">Abstract scraper providers (Apify / Data365)</label></li>
+          <li><input type="checkbox" id="c18c"><label for="c18c">Config-driven selection + automatic failover</label></li>
+          <li><input type="checkbox" id="c18d"><label for="c18d">Per-provider health checks</label></li>
+        </ul></td>
+        <td><ul class="chk test">
+          <li><input type="checkbox" id="t18a"><label for="t18a">Disable OpenAI<span class="exp">Expected: Gemini path processes posts</span></label></li>
+          <li><input type="checkbox" id="t18b"><label for="t18b">Simulate a provider outage<span class="exp">Expected: auto-failover, pipeline keeps running</span></label></li>
+          <li><input type="checkbox" id="t18c"><label for="t18c">Switch provider via config<span class="exp">Expected: no code change needed</span></label></li>
+        </ul></td>
+      </tr>
+
+    </tbody>
+  </table>
+  </div></div>
+
+  <footer>
+    Sequencing key: <span class="pill seq-before">Before</span> = fix on the current system first &nbsp;·&nbsp;
+    <span class="pill seq-after">After</span> = best delivered as part of, or after, the Google Cloud migration. &nbsp;|&nbsp; Scenarios drawn from the SSA codebase (<code>email-sender</code>). Progress is saved locally in your browser.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  var KEY='ssa_roadmap_v1';
+  var boxes=[].slice.call(document.querySelectorAll('input[type=checkbox]'));
+  var saved={};
+  try{ saved=JSON.parse(localStorage.getItem(KEY))||{}; }catch(e){ saved={}; }
+  boxes.forEach(function(b){ if(saved[b.id]) b.checked=true; b.addEventListener('change',onChange); });
+
+  function rowCounters(){
+    document.querySelectorAll('tbody tr').forEach(function(tr){
+      var badge=tr.querySelector('[data-prog]'); if(!badge) return;
+      var bs=tr.querySelectorAll('input[type=checkbox]');
+      var done=0; bs.forEach(function(b){ if(b.checked) done++; });
+      badge.textContent=done+' / '+bs.length+' done';
+      badge.classList.toggle('done', done===bs.length && bs.length>0);
+    });
+  }
+  function overall(){
+    var done=boxes.filter(function(b){return b.checked;}).length;
+    var pct=boxes.length? Math.round(done/boxes.length*100):0;
+    document.getElementById('ovbar').style.width=pct+'%';
+    document.getElementById('ovtxt').textContent=done+' / '+boxes.length+'  ('+pct+'%)';
+  }
+  function persist(){
+    var o={}; boxes.forEach(function(b){ if(b.checked) o[b.id]=1; });
+    try{ localStorage.setItem(KEY, JSON.stringify(o)); }catch(e){}
+  }
+  function onChange(){ persist(); rowCounters(); overall(); }
+  window.setAll=function(v){ boxes.forEach(function(b){ b.checked=v; }); onChange(); };
+  window.resetAll=function(){ try{ localStorage.removeItem(KEY); }catch(e){} boxes.forEach(function(b){ b.checked=false; }); rowCounters(); overall(); };
+  rowCounters(); overall();
+})();
+</script>
+
+
+</body></html>
